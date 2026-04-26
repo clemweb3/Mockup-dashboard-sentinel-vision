@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentinelVision v4 — Security Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS ── */
+:root {
+  --bg0: #080a0e;
+  --bg1: #0d1117;
+  --bg2: #111620;
+  --bg3: #161c28;
+  --bg4: #1d2535;
+  --border: rgba(255,255,255,0.07);
+  --border-mid: rgba(255,255,255,0.12);
+  --border-hi: rgba(255,255,255,0.2);
+  --text-primary: #e8eaf0;
+  --text-secondary: #8b92a5;
+  --text-muted: #4a5168;
+  --accent-cyan: #22d3ee;
+  --accent-cyan-dim: rgba(34,211,238,0.15);
+  --accent-cyan-glow: rgba(34,211,238,0.08);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --red-border: rgba(239,68,68,0.3);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.1);
+  --amber-border: rgba(245,158,11,0.28);
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45,212,191,0.1);
+  --teal-border: rgba(45,212,191,0.25);
+  --green: #10b981;
+  --green-dim: rgba(16,185,129,0.1);
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Space Grotesk', system-ui, sans-serif;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+[data-theme="light"] {
+  --bg0: #f0f2f5;
+  --bg1: #ffffff;
+  --bg2: #f7f8fa;
+  --bg3: #eef0f4;
+  --bg4: #e4e7ed;
+  --border: rgba(0,0,0,0.07);
+  --border-mid: rgba(0,0,0,0.12);
+  --border-hi: rgba(0,0,0,0.2);
+  --text-primary: #0f1117;
+  --text-secondary: #4a5168;
+  --text-muted: #9ca3b2;
+  --accent-cyan: #0891b2;
+  --accent-cyan-dim: rgba(8,145,178,0.1);
+  --accent-cyan-glow: rgba(8,145,178,0.05);
+  --red-dim: rgba(239,68,68,0.08);
+  --amber-dim: rgba(245,158,11,0.08);
+  --teal-dim: rgba(45,212,191,0.08);
+  --green-dim: rgba(16,185,129,0.08);
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: var(--bg0); color: var(--text-primary); font-family: var(--sans); font-size: 13px; overflow-x: hidden; }
+
+/* ── SCAN LINE ANIMATION ── */
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes blink { 0%,100%{opacity:1} 49%{opacity:1} 50%{opacity:0} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes ripple { from{transform:scale(.8);opacity:.6} to{transform:scale(2.5);opacity:0} }
+@keyframes slideRight { from{width:0} to{width:var(--w,60%)} }
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+/* ── WRAPPER ── */
+#app {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent-cyan);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background: var(--accent-cyan-glow);
+}
+.logo-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 1px solid var(--accent-cyan);
+  animation: ripple 3s ease-out infinite;
+}
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-cyan); }
+.topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 6px;
+}
+.cam-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: .03em;
+}
+.cam-pill:hover { background: var(--bg4); color: var(--text-primary); }
+.cam-pill.active { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.cam-pill.warn .status-dot { background: var(--amber); }
+.cam-pill.dead .status-dot { background: var(--red); opacity: .7; }
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+.status-dot.pulse { animation: pulse 2s infinite; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.clock {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: .06em;
+}
+.btn-icon {
+  width: 30px; height: 30px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-mid);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  transition: all .15s;
+}
+.btn-icon:hover { background: var(--bg4); color: var(--text-primary); border-color: var(--border-hi); }
+.btn-icon.active { background: var(--accent-cyan-dim); color: var(--accent-cyan); border-color: rgba(34,211,238,.3); }
+
+/* ── ALERT TICKER ── */
+.alert-ticker {
+  height: 28px;
+  background: var(--red-dim);
+  border-bottom: 1px solid var(--red-border);
+  display: flex; align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+.ticker-label {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px;
+  border-right: 1px solid var(--red-border);
+  font-size: 9px;
+  font-family: var(--mono);
+  letter-spacing: .1em;
+  color: var(--red);
+  font-weight: 500;
+  height: 100%;
+  text-transform: uppercase;
+}
+.ticker-scroll { flex: 1; overflow: hidden; }
+.ticker-inner {
+  display: flex; gap: 48px;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  animation: ticker 28s linear infinite;
+  letter-spacing: .03em;
+}
+.ticker-inner span { flex-shrink: 0; }
+.ticker-inner .hi { color: var(--red); }
+.ticker-inner .md { color: var(--amber); }
+
+/* ── STAT BAR ── */
+.statbar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.stat {
+  background: var(--bg1);
+  padding: 10px 16px;
+  cursor: default;
+  transition: background .15s;
+  position: relative;
+}
+.stat:hover { background: var(--bg2); }
+.stat-label {
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 4px;
+}
+.stat-val {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.stat-val.red { color: var(--red); }
+.stat-val.amber { color: var(--amber); }
+.stat-val.teal { color: var(--teal); }
+.stat-val.cyan { color: var(--accent-cyan); }
+.stat-delta {
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.stat-delta.up { color: var(--red); }
+.stat-delta.dn { color: var(--teal); }
+
+/* ── MAIN LAYOUT ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px 280px;
+  gap: 1px;
+  background: var(--border);
+  flex: 1;
+}
+.panel {
+  background: var(--bg1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-size: 9px;
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.panel-action {
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+}
+.panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 2px; }
+
+/* ── FEED EVENTS ── */
+.ev {
+  border-left: 3px solid var(--border);
+  margin: 8px;
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  background: var(--bg2);
+  transition: all .15s;
+  cursor: pointer;
+  animation: fadeIn .3s ease;
+}
+.ev:hover { background: var(--bg3); border-left-color: var(--border-hi); }
+.ev.high { border-left-color: var(--red); background: var(--red-dim); }
+.ev.high:hover { background: rgba(239,68,68,.16); }
+.ev.med { border-left-color: var(--amber); background: var(--amber-dim); }
+.ev.med:hover { background: rgba(245,158,11,.14); }
+.ev.low { border-left-color: var(--border-mid); }
+.ev-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 5px;
+}
+.ev-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ev-cam {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: .05em;
+}
+.badge {
+  font-size: 8px;
+  font-family: var(--mono);
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.badge.H { background: rgba(239,68,68,.18); color: var(--red); border: 1px solid var(--red-border); }
+.badge.M { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid var(--amber-border); }
+.badge.L { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid var(--teal-border); }
+.badge.flag { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.2); margin-left: 2px; }
+.ev-time { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
+.ev-persons { font-size: 11px; color: var(--text-primary); margin-bottom: 4px; line-height: 1.4; }
+.ev-summary { font-size: 10px; color: var(--text-secondary); line-height: 1.6; }
+.ev-summary.pending { color: var(--text-muted); font-style: italic; display: flex; align-items: center; gap: 5px; }
+.typing-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); display: inline-block; animation: pulse 1s infinite; }
+.typing-dot:nth-child(2) { animation-delay: .2s; }
+.typing-dot:nth-child(3) { animation-delay: .4s; }
+.ev-footer {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.ev-tag {
+  font-size: 8px;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg4);
+  color: var(--text-muted);
+  letter-spacing: .04em;
+}
+.ev-action {
+  margin-left: auto;
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--accent-cyan);
+  cursor: pointer;
+  opacity: .6;
+  transition: opacity .15s;
+}
+.ev-action:hover { opacity: 1; }
+
+/* ── PERSON REGISTRY ── */
+.person-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+}
+.person-row:hover { background: var(--bg2); }
+.person-row.flagged { background: var(--red-dim); }
+.person-row.flagged:hover { background: rgba(239,68,68,.14); }
+.avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg4);
+  border: 1.5px solid var(--border-mid);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.avatar.danger { border-color: rgba(239,68,68,.5); color: var(--red); background: var(--red-dim); }
+.avatar.warn { border-color: rgba(245,158,11,.5); color: var(--amber); background: var(--amber-dim); }
+.person-info { flex: 1; min-width: 0; }
+.person-id {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.person-meta { font-size: 9px; color: var(--text-secondary); margin-top: 2px; }
+.suspicion-wrap { text-align: right; flex-shrink: 0; }
+.suspicion-score {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+}
+.suspicion-score.hi { color: var(--red); }
+.suspicion-score.md { color: var(--amber); }
+.suspicion-score.lo { color: var(--teal); }
+.suspicion-label { font-size: 8px; color: var(--text-muted); margin-top: 1px; }
+
+/* ── SUSPICION BAR ── */
+.sus-bar-wrap { padding: 6px 12px 10px; border-bottom: 1px solid var(--border); }
+.sus-bar-label { font-size: 9px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 4px; display: flex; justify-content: space-between; }
+.sus-bar { height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.sus-bar-fill { height: 100%; border-radius: 2px; animation: slideRight .6s ease-out forwards; }
+.sus-bar-fill.hi { background: var(--red); }
+.sus-bar-fill.md { background: var(--amber); }
+.sus-bar-fill.lo { background: var(--teal); }
+
+/* ── HEATMAP ── */
+.heatmap-section { padding: 10px 12px; }
+.section-label {
+  font-size: 9px; font-family: var(--mono);
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: .08em; margin-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.heatmap-canvas {
+  width: 100%; height: 130px;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.hm-grid {
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0, rgba(255,255,255,.03) 1px, transparent 1px, transparent 20px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0, rgba(255,255,255,.03) 1px, transparent 1px, transparent 20px);
+}
+.hm-blob { position: absolute; border-radius: 50%; filter: blur(14px); pointer-events: none; }
+.hm-legend {
+  display: flex; gap: 10px; margin-top: 6px;
+  font-size: 8px; font-family: var(--mono); color: var(--text-muted);
+}
+.hm-legend span { display: flex; align-items: center; gap: 4px; }
+.hm-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── ALERT LOG (right col) ── */
+.alert-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  transition: background .15s;
+  cursor: pointer;
+}
+.alert-row:hover { background: var(--bg2); }
+.alert-row .badge { flex-shrink: 0; margin-top: 1px; }
+.alert-content { flex: 1; min-width: 0; }
+.alert-title { color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alert-sub { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.alert-status { font-family: var(--mono); font-size: 9px; flex-shrink: 0; text-align: right; }
+.alert-status.sent { color: var(--teal); }
+.alert-status.logged { color: var(--amber); }
+.alert-status.failed { color: var(--red); }
+
+/* ── SYSTEM HEALTH (right col bottom) ── */
+.health-section { padding: 10px 12px; border-top: 1px solid var(--border); }
+.health-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+.health-row:last-child { border-bottom: none; }
+.health-name { color: var(--text-secondary); flex: 1; font-family: var(--mono); font-size: 9px; letter-spacing: .03em; }
+.health-val { font-family: var(--mono); font-size: 9px; color: var(--text-primary); }
+.health-bar { width: 60px; height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.health-fill { height: 100%; border-radius: 2px; transition: width .5s; }
+.health-fill.ok { background: var(--green); }
+.health-fill.warn { background: var(--amber); }
+.health-fill.crit { background: var(--red); }
+
+/* ── BOTTOM ROW ── */
+.bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+
+/* ── CAMERA GRID ── */
+.cam-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; }
+.cam-cell {
+  background: #050608;
+  border-radius: var(--radius);
+  aspect-ratio: 16/9;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color .2s;
+}
+.cam-cell:hover { border-color: var(--border-hi); }
+.cam-cell.active { border-color: rgba(34,211,238,.4); }
+.cam-overlay {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 7px;
+  background: linear-gradient(180deg, rgba(0,0,0,.7) 0%, transparent 100%);
+}
+.cam-name { font-family: var(--mono); font-size: 8px; color: #94a3b8; letter-spacing: .04em; }
+.cam-body { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+/* Detection boxes */
+.det-box {
+  position: absolute;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.det-box.person { border: 1.5px solid rgba(239,68,68,.8); }
+.det-box.object { border: 1.5px solid rgba(45,212,191,.7); }
+.det-label {
+  position: absolute;
+  top: -14px; left: -1px;
+  font-family: var(--mono);
+  font-size: 7px;
+  color: #fff;
+  background: rgba(239,68,68,.9);
+  padding: 1px 4px;
+  border-radius: 2px 2px 0 0;
+  white-space: nowrap;
+}
+.det-label.obj { background: rgba(45,212,191,.85); color: #000; }
+.scanline {
+  position: absolute; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(45,212,191,.6) 50%, transparent);
+  animation: scan 4s linear infinite;
+}
+@keyframes scan { 0%{top:5%} 100%{top:95%} }
+.cam-offline { font-size: 9px; color: #4a5168; font-family: var(--mono); }
+.cam-reconnecting { font-size: 8px; color: var(--amber); font-family: var(--mono); animation: blink 1.2s step-end infinite; }
+
+/* ── MINI CHART (sparklines) ── */
+.sparkline-wrap { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.spark-row { display: flex; align-items: center; gap: 8px; }
+.spark-name { font-size: 9px; font-family: var(--mono); color: var(--text-muted); width: 80px; flex-shrink: 0; letter-spacing: .04em; }
+.spark-track { flex: 1; height: 28px; position: relative; }
+.spark-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 100%; }
+.spark-bar {
+  flex: 1;
+  min-width: 3px;
+  border-radius: 2px 2px 0 0;
+  transition: opacity .15s;
+}
+.spark-bar:hover { opacity: .8; }
+.spark-val { font-size: 9px; font-family: var(--mono); color: var(--text-primary); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg1);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-lg);
+  width: 480px;
+  max-width: 95vw;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn .2s ease;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-primary); }
+.modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+.modal-close:hover { color: var(--text-primary); }
+.modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+.modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+.modal-row:last-child { border-bottom: none; }
+.modal-key { color: var(--text-secondary); font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+.modal-val { color: var(--text-primary); }
+.timeline { margin-top: 12px; }
+.tl-item { display: flex; gap: 10px; padding: 6px 0; font-size: 10px; }
+.tl-time { font-family: var(--mono); font-size: 9px; color: var(--text-muted); width: 44px; flex-shrink: 0; }
+.tl-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+.tl-text { color: var(--text-secondary); line-height: 1.5; }
+
+/* ── THEME TOGGLE ── */
+#themeToggle { cursor: pointer; }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filter-btn {
+  font-size: 9px; font-family: var(--mono);
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-mid);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .04em;
+}
+.filter-btn:hover { background: var(--bg4); color: var(--text-primary); }
+.filter-btn.active { background: var(--accent-cyan-dim); color: var(--accent-cyan); border-color: rgba(34,211,238,.3); }
+.filter-search {
+  margin-left: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text-primary);
+  width: 130px;
+  outline: none;
+  transition: border-color .15s;
+}
+.filter-search:focus { border-color: rgba(34,211,238,.4); }
+.filter-search::placeholder { color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-icon"><div class="logo-dot"></div></div>
+      SENTINELVISION <span style="color:var(--text-muted)">v4</span>
+    </div>
+    <div class="topbar-center">
+      <div class="cam-pill active"><span class="status-dot pulse"></span>tapo-north-wide</div>
+      <div class="cam-pill"><span class="status-dot pulse"></span>tapo-north-tele</div>
+      <div class="cam-pill warn"><span class="status-dot"></span>tapo-south</div>
+      <div class="cam-pill dead"><span class="status-dot"></span>webcam-01</div>
+    </div>
+    <div class="topbar-right">
+      <div class="clock" id="clock">--:--:--</div>
+      <button class="btn-icon" id="themeToggle" title="Toggle theme">◐</button>
+      <button class="btn-icon" title="Settings">⚙</button>
+      <button class="btn-icon active" title="Alerts on">🔔</button>
+    </div>
+  </header>
+
+  <!-- ALERT TICKER -->
+  <div class="alert-ticker" id="ticker-wrap">
+    <div class="ticker-label">
+      <span style="animation:blink 1s step-end infinite; color:var(--red)">●</span>
+      ACTIVE ALERTS
+    </div>
+    <div class="ticker-scroll">
+      <div class="ticker-inner" id="ticker">
+        <span><span class="hi">● HIGH</span> — UUID a3f2: scissors detected at north gate (14:31:54)</span>
+        <span><span class="hi">● HIGH</span> — UUID a3f2: 3rd session return — pattern flagged (14:28:03)</span>
+        <span><span class="md">● MED</span> — UUID c1b9: loitering north entrance &gt;4min (14:22:17)</span>
+        <span><span class="hi">● HIGH</span> — UUID a3f2: scissors detected at north gate (14:31:54)</span>
+        <span><span class="hi">● HIGH</span> — UUID a3f2: 3rd session return — pattern flagged (14:28:03)</span>
+        <span><span class="md">● MED</span> — UUID c1b9: loitering north entrance &gt;4min (14:22:17)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAT BAR -->
+  <div class="statbar">
+    <div class="stat">
+      <div class="stat-label">Events Today</div>
+      <div class="stat-val" id="ev-count">284</div>
+      <div class="stat-delta up">▲ +12% vs yesterday</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">High Risk</div>
+      <div class="stat-val red">3</div>
+      <div class="stat-delta up">▲ +2 in last hour</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Persons Tracked</div>
+      <div class="stat-val teal">12</div>
+      <div class="stat-delta dn">▼ 2 exited zone</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Suspected</div>
+      <div class="stat-val amber">2</div>
+      <div class="stat-delta" style="color:var(--text-muted)">— unchanged</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Avg YOLO Conf</div>
+      <div class="stat-val cyan">0.81</div>
+      <div class="stat-delta dn">▼ normal range</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Storage Used</div>
+      <div class="stat-val" style="font-size:18px">18.4 GB</div>
+      <div class="stat-delta" style="color:var(--text-muted)">of 50 GB · 37%</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- COL 1: Live Feed -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Live Detection Feed</span>
+        <span class="panel-action">AI-enriched · 2-wave delivery</span>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterFeed('all',this)">All</button>
+        <button class="filter-btn" onclick="filterFeed('high',this)">High</button>
+        <button class="filter-btn" onclick="filterFeed('med',this)">Medium</button>
+        <button class="filter-btn" onclick="filterFeed('low',this)">Low</button>
+        <input type="text" class="filter-search" placeholder="Search camera, UUID…" oninput="searchFeed(this.value)">
+      </div>
+      <div class="panel-body" id="feed">
+
+        <!-- HIGH EVENT -->
+        <div class="ev high" onclick="openModal('a3f2')">
+          <div class="ev-meta">
+            <div class="ev-left">
+              <span class="ev-cam">tapo-north-wide</span>
+              <span class="badge H">● HIGH</span>
+              <span class="badge flag">REPEAT VISITOR</span>
+              <span class="badge flag">FLAGGED</span>
+            </div>
+            <span class="ev-time">14:31:54</span>
+          </div>
+          <div class="ev-persons">Person t-003 · upright · holding scissors · conf 0.921</div>
+          <div class="ev-summary">UUID a3f2… has appeared 4× this session near the north gate. Currently holding high-risk object (scissors). Posture is alert, facing camera directly. Pattern suggests deliberate approach — recommend immediate operator action.</div>
+          <div class="ev-footer">
+            <span class="ev-tag">scissors</span>
+            <span class="ev-tag">repeat</span>
+            <span class="ev-tag">gate-zone</span>
+            <span class="ev-action">→ View profile</span>
+          </div>
+        </div>
+
+        <!-- MED EVENT -->
+        <div class="ev med" onclick="openModal('c1b9')">
+          <div class="ev-meta">
+            <div class="ev-left">
+              <span class="ev-cam">tapo-north-tele</span>
+              <span class="badge M">● MED</span>
+            </div>
+            <span class="ev-time">14:31:22</span>
+          </div>
+          <div class="ev-persons">Person t-001 · upright · holding backpack · conf 0.874</div>
+          <div class="ev-summary">Individual carrying backpack near north entrance. Dwell time 4 min 12 sec — above 3-min threshold. No prior high-risk sightings this session. Continue monitoring for loitering pattern.</div>
+          <div class="ev-footer">
+            <span class="ev-tag">backpack</span>
+            <span class="ev-tag">loitering</span>
+            <span class="ev-action">→ View profile</span>
+          </div>
+        </div>
+
+        <!-- LOW EVENT PENDING AI -->
+        <div class="ev low">
+          <div class="ev-meta">
+            <div class="ev-left">
+              <span class="ev-cam">tapo-north-wide</span>
+              <span class="badge L">● LOW</span>
+            </div>
+            <span class="ev-time">14:30:58</span>
+          </div>
+          <div class="ev-persons">2 persons · t-007, t-009 · neutral posture · no held objects</div>
+          <div class="ev-summary pending">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span>AI summary generating…</span>
+          </div>
+          <div class="ev-footer">
+            <span class="ev-tag">2 persons</span>
+            <span class="ev-tag">transit</span>
+          </div>
+        </div>
+
+        <!-- LOW EVENT -->
+        <div class="ev low">
+          <div class="ev-meta">
+            <div class="ev-left">
+              <span class="ev-cam">tapo-south</span>
+              <span class="badge L">● LOW</span>
+            </div>
+            <span class="ev-time">14:30:31</span>
+          </div>
+          <div class="ev-persons">1 person · t-002 · walking · no held objects · conf 0.761</div>
+          <div class="ev-summary">Single individual transiting south perimeter. No threat indicators detected. New UUID — first appearance today. Standard transit pattern.</div>
+          <div class="ev-footer">
+            <span class="ev-tag">transit</span>
+            <span class="ev-action">→ View profile</span>
+          </div>
+        </div>
+
+        <!-- LOW EVENT 2 -->
+        <div class="ev low">
+          <div class="ev-meta">
+            <div class="ev-left">
+              <span class="ev-cam">tapo-north-tele</span>
+              <span class="badge L">● LOW</span>
+            </div>
+            <span class="ev-time">14:29:44</span>
+          </div>
+          <div class="ev-persons">1 person · t-005 · upright · holding umbrella · conf 0.803</div>
+          <div class="ev-summary">Person with umbrella entering north camera zone. Object classification: medium-risk (umbrella). First appearance this session — no pattern established yet.</div>
+          <div class="ev-footer">
+            <span class="ev-tag">umbrella</span>
+            <span class="ev-tag">new-entry</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- COL 2: Person Registry + Heatmap -->
+    <div class="panel" style="border-left:1px solid var(--border)">
+      <div class="panel-head">
+        <span class="panel-title">Person Registry</span>
+        <span class="panel-action">UUID · dwell · risk</span>
+      </div>
+      <div class="panel-body">
+
+        <!-- flagged person -->
+        <div class="person-row flagged" onclick="openModal('a3f2')">
+          <div class="avatar danger">a3</div>
+          <div class="person-info">
+            <div class="person-id">UUID a3f2-b1c9 <span class="badge flag">FLAGGED</span></div>
+            <div class="person-meta">4 appearances · dwell 7m 43s · scissors</div>
+          </div>
+          <div class="suspicion-wrap">
+            <div class="suspicion-score hi">89%</div>
+            <div class="suspicion-label">suspicion</div>
+          </div>
+        </div>
+        <div class="sus-bar-wrap" style="border-bottom:1px solid var(--border)">
+          <div class="sus-bar"><div class="sus-bar-fill hi" style="--w:89%;width:89%"></div></div>
+        </div>
+
+        <div class="person-row" onclick="openModal('c1b9')">
+          <div class="avatar warn">c1</div>
+          <div class="person-info">
+            <div class="person-id">UUID c1b9-d4e2</div>
+            <div class="person-meta">2 appearances · dwell 4m 12s · backpack</div>
+          </div>
+          <div class="suspicion-wrap">
+            <div class="suspicion-score md">52%</div>
+            <div class="suspicion-label">suspicion</div>
+          </div>
+        </div>
+        <div class="sus-bar-wrap" style="border-bottom:1px solid var(--border)">
+          <div class="sus-bar"><div class="sus-bar-fill md" style="--w:52%;width:52%"></div></div>
+        </div>
+
+        <div class="person-row">
+          <div class="avatar">f7</div>
+          <div class="person-info">
+            <div class="person-id">UUID f7a3-2d11</div>
+            <div class="person-meta">1 appearance · dwell 0m 42s · no objects</div>
+          </div>
+          <div class="suspicion-wrap">
+            <div class="suspicion-score lo">08%</div>
+            <div class="suspicion-label">suspicion</div>
+          </div>
+        </div>
+        <div class="sus-bar-wrap" style="border-bottom:1px solid var(--border)">
+          <div class="sus-bar"><div class="sus-bar-fill lo" style="--w:8%;width:8%"></div></div>
+        </div>
+
+        <div class="person-row">
+          <div class="avatar">9e</div>
+          <div class="person-info">
+            <div class="person-id">UUID 9e41-77f0</div>
+            <div class="person-meta">1 appearance · dwell 0m 18s · transit</div>
+          </div>
+          <div class="suspicion-wrap">
+            <div class="suspicion-score lo">04%</div>
+            <div class="suspicion-label">suspicion</div>
+          </div>
+        </div>
+        <div class="sus-bar-wrap">
+          <div class="sus-bar"><div class="sus-bar-fill lo" style="--w:4%;width:4%"></div></div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="heatmap-section">
+          <div class="section-label">
+            <span>Path Heatmap · last 30 min</span>
+            <span style="color:var(--text-muted)">tapo-north-wide</span>
+          </div>
+          <div class="heatmap-canvas">
+            <div class="hm-grid"></div>
+            <div class="hm-blob" style="width:70px;height:70px;background:#ef4444;opacity:.35;left:35%;top:10%"></div>
+            <div class="hm-blob" style="width:45px;height:45px;background:#ef4444;opacity:.25;left:40%;top:30%"></div>
+            <div class="hm-blob" style="width:40px;height:40px;background:#f59e0b;opacity:.3;left:55%;top:50%"></div>
+            <div class="hm-blob" style="width:28px;height:28px;background:#3b82f6;opacity:.3;left:15%;top:55%"></div>
+            <div class="hm-blob" style="width:22px;height:22px;background:#3b82f6;opacity:.2;left:75%;top:70%"></div>
+          </div>
+          <div class="hm-legend">
+            <span><div class="hm-dot" style="background:#ef4444"></div> high dwell</span>
+            <span><div class="hm-dot" style="background:#f59e0b"></div> transit</span>
+            <span><div class="hm-dot" style="background:#3b82f6"></div> entry/exit</span>
+          </div>
+        </div>
+
+        <!-- Sparklines -->
+        <div class="heatmap-section" style="border-top:1px solid var(--border)">
+          <div class="section-label"><span>Event Volume · 24h</span></div>
+          <div class="sparkline-wrap">
+            <div class="spark-row">
+              <span class="spark-name">high-risk</span>
+              <div class="spark-track"><div class="spark-bars" id="spark-high"></div></div>
+              <span class="spark-val">3</span>
+            </div>
+            <div class="spark-row">
+              <span class="spark-name">medium</span>
+              <div class="spark-track"><div class="spark-bars" id="spark-med"></div></div>
+              <span class="spark-val">21</span>
+            </div>
+            <div class="spark-row">
+              <span class="spark-name">low</span>
+              <div class="spark-track"><div class="spark-bars" id="spark-low"></div></div>
+              <span class="spark-val">260</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- COL 3: Alert Log + System Health -->
+    <div class="panel" style="border-left:1px solid var(--border)">
+      <div class="panel-head">
+        <span class="panel-title">Alert Log</span>
+        <span class="panel-action">webhook · email</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="alert-row">
+          <span class="badge H">HIGH</span>
+          <div class="alert-content">
+            <div class="alert-title">a3f2: scissors at north gate</div>
+            <div class="alert-sub"><span>14:31:54</span><span>webhook + email</span></div>
+          </div>
+          <div class="alert-status sent">✓ sent</div>
+        </div>
+
+        <div class="alert-row">
+          <span class="badge H">HIGH</span>
+          <div class="alert-content">
+            <div class="alert-title">a3f2: 3rd return — pattern flagged</div>
+            <div class="alert-sub"><span>14:28:03</span><span>webhook + email</span></div>
+          </div>
+          <div class="alert-status sent">✓ sent</div>
+        </div>
+
+        <div class="alert-row">
+          <span class="badge M">MED</span>
+          <div class="alert-content">
+            <div class="alert-title">c1b9: loitering north entrance &gt;4 min</div>
+            <div class="alert-sub"><span>14:22:17</span><span>logged only</span></div>
+          </div>
+          <div class="alert-status logged">⚠ logged</div>
+        </div>
+
+        <div class="alert-row">
+          <span class="badge H">HIGH</span>
+          <div class="alert-content">
+            <div class="alert-title">a3f2: first high-risk flag this session</div>
+            <div class="alert-sub"><span>14:15:31</span><span>webhook + email</span></div>
+          </div>
+          <div class="alert-status sent">✓ sent</div>
+        </div>
+
+        <div class="alert-row" style="opacity:.5">
+          <span class="badge M">MED</span>
+          <div class="alert-content">
+            <div class="alert-title">9e41: vehicle detected south zone</div>
+            <div class="alert-sub"><span>13:58:12</span><span>webhook timeout</span></div>
+          </div>
+          <div class="alert-status failed">✗ failed</div>
+        </div>
+
+        <!-- System Health -->
+        <div class="health-section">
+          <div class="section-label" style="margin-bottom:8px"><span>System Health</span></div>
+          <div class="health-row">
+            <span class="health-name">L1 ingest</span>
+            <div class="health-bar"><div class="health-fill ok" style="width:95%"></div></div>
+            <span class="health-val" style="color:var(--green)">OK</span>
+          </div>
+          <div class="health-row">
+            <span class="health-name">L2 YOLO inf.</span>
+            <div class="health-bar"><div class="health-fill ok" style="width:78%"></div></div>
+            <span class="health-val" style="color:var(--green)">78ms</span>
+          </div>
+          <div class="health-row">
+            <span class="health-name">L3 Gemini</span>
+            <div class="health-bar"><div class="health-fill warn" style="width:60%"></div></div>
+            <span class="health-val" style="color:var(--amber)">2.4s</span>
+          </div>
+          <div class="health-row">
+            <span class="health-name">L4 MediaMTX</span>
+            <div class="health-bar"><div class="health-fill ok" style="width:100%"></div></div>
+            <span class="health-val" style="color:var(--green)">LIVE</span>
+          </div>
+          <div class="health-row">
+            <span class="health-name">L5 SQLite</span>
+            <div class="health-bar"><div class="health-fill ok" style="width:90%"></div></div>
+            <span class="health-val" style="color:var(--green)">OK</span>
+          </div>
+          <div class="health-row">
+            <span class="health-name">CPU usage</span>
+            <div class="health-bar"><div class="health-fill warn" style="width:64%"></div></div>
+            <span class="health-val" style="color:var(--amber)">64%</span>
+          </div>
+          <div class="health-row">
+            <span class="health-name">RAM</span>
+            <div class="health-bar"><div class="health-fill ok" style="width:42%"></div></div>
+            <span class="health-val">42%</span>
+          </div>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="health-section" style="border-top:1px solid var(--border)">
+          <div class="section-label" style="margin-bottom:6px"><span>Webhooks</span></div>
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text-muted);line-height:2;">
+            <div>webhook.site/abc123 <span style="color:var(--green)">● 200</span></div>
+            <div>guard@example.com <span style="color:var(--green)">● OK</span></div>
+            <div>@sentinelbot <span style="color:var(--amber)">● timeout</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /main-grid -->
+
+  <!-- BOTTOM ROW -->
+  <div class="bottom-row">
+
+    <!-- CAMERA FEEDS -->
+    <div class="panel" style="border-top:1px solid var(--border)">
+      <div class="panel-head">
+        <span class="panel-title">Live Feeds</span>
+        <span class="panel-action">HLS · click to fullscreen</span>
+      </div>
+      <div class="cam-grid">
+
+        <!-- cam 1 — active with detections -->
+        <div class="cam-cell active" onclick="camClick('tapo-north-wide')">
+          <div class="cam-overlay">
+            <span class="cam-name">tapo-north-wide</span>
+            <span class="status-dot pulse"></span>
+          </div>
+          <!-- simulated frame content -->
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0a0f18 0%,#0d1520 100%)">
+            <div style="position:absolute;left:15%;top:25%;width:28%;height:55%;opacity:.15;background:linear-gradient(180deg,#2a3850,#141c2c);border-radius:2px"></div>
+            <div style="position:absolute;left:50%;top:20%;width:20%;height:60%;opacity:.1;background:linear-gradient(180deg,#2a3850,#141c2c);border-radius:2px"></div>
+          </div>
+          <!-- detection boxes -->
+          <div class="det-box person" style="left:32%;top:22%;width:22%;height:52%">
+            <div class="det-label">t-003 · 0.92</div>
+          </div>
+          <div class="det-box person" style="left:60%;top:30%;width:16%;height:42%">
+            <div class="det-label">t-007 · 0.76</div>
+          </div>
+          <div class="det-box object" style="left:36%;top:54%;width:8%;height:12%">
+            <div class="det-label obj">scissors · 0.88</div>
+          </div>
+          <div class="scanline"></div>
+          <!-- rec indicator -->
+          <div style="position:absolute;bottom:5px;right:7px;font-family:var(--mono);font-size:7px;color:#ef4444;display:flex;align-items:center;gap:3px">
+            <span style="animation:blink 1s step-end infinite">●</span> REC
+          </div>
+        </div>
+
+        <!-- cam 2 -->
+        <div class="cam-cell" onclick="camClick('tapo-north-tele')">
+          <div class="cam-overlay">
+            <span class="cam-name">tapo-north-tele</span>
+            <span class="status-dot pulse"></span>
+          </div>
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0c1018 0%,#0f1820 100%)"></div>
+          <div class="det-box person" style="left:42%;top:18%;width:24%;height:58%">
+            <div class="det-label">t-001 · 0.87</div>
+          </div>
+          <div class="det-box object" style="left:44%;top:50%;width:12%;height:20%">
+            <div class="det-label obj">backpack · 0.82</div>
+          </div>
+          <div class="scanline" style="animation-delay:-2s"></div>
+          <div style="position:absolute;bottom:5px;right:7px;font-family:var(--mono);font-size:7px;color:#ef4444;display:flex;align-items:center;gap:3px">
+            <span style="animation:blink 1s step-end infinite .5s">●</span> REC
+          </div>
+        </div>
+
+        <!-- cam 3 — warn -->
+        <div class="cam-cell" onclick="camClick('tapo-south')" style="opacity:.55">
+          <div class="cam-overlay">
+            <span class="cam-name">tapo-south</span>
+            <span class="status-dot" style="background:var(--amber)"></span>
+          </div>
+          <div style="position:absolute;inset:0;background:#080a0c"></div>
+          <div class="cam-body"><span class="cam-reconnecting">RECONNECTING…</span></div>
+        </div>
+
+        <!-- cam 4 — offline -->
+        <div class="cam-cell" onclick="camClick('webcam-01')" style="opacity:.3">
+          <div class="cam-overlay">
+            <span class="cam-name">webcam-01</span>
+            <span class="status-dot" style="background:var(--red)"></span>
+          </div>
+          <div style="position:absolute;inset:0;background:#060708"></div>
+          <div class="cam-body"><span class="cam-offline">OFFLINE</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MINI ACTIVITY CHART + SESSION INFO -->
+    <div class="panel" style="border-top:1px solid var(--border);border-left:1px solid var(--border)">
+      <div class="panel-head">
+        <span class="panel-title">Session Intelligence</span>
+        <span class="panel-action" id="session-id" style="font-family:var(--mono);font-size:9px"></span>
+      </div>
+      <div class="panel-body">
+
+        <!-- mini stat strip -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)">
+          <div style="background:var(--bg1);padding:8px 10px">
+            <div class="stat-label">Uptime</div>
+            <div style="font-family:var(--mono);font-size:14px;color:var(--text-primary)" id="uptime">02:14:33</div>
+          </div>
+          <div style="background:var(--bg1);padding:8px 10px">
+            <div class="stat-label">Frames/s</div>
+            <div style="font-family:var(--mono);font-size:14px;color:var(--accent-cyan)" id="fps-counter">10</div>
+          </div>
+          <div style="background:var(--bg1);padding:8px 10px">
+            <div class="stat-label">WebSocket</div>
+            <div style="font-family:var(--mono);font-size:14px;color:var(--green)">1 client</div>
+          </div>
+          <div style="background:var(--bg1);padding:8px 10px">
+            <div class="stat-label">YOLO model</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-secondary)">yolo11n</div>
+          </div>
+        </div>
+
+        <!-- Inference latency sparkline -->
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+          <div class="section-label"><span>YOLO inference latency (ms) · last 30 frames</span></div>
+          <div style="height:40px;position:relative">
+            <canvas id="latency-chart" style="width:100%;height:40px"></canvas>
+          </div>
+        </div>
+
+        <!-- confidence distribution -->
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+          <div class="section-label"><span>Detection confidence distribution</span></div>
+          <div style="display:flex;align-items:flex-end;gap:2px;height:36px" id="conf-dist"></div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:var(--text-muted);margin-top:3px">
+            <span>0.45</span><span>0.60</span><span>0.75</span><span>0.90</span><span>1.00</span>
+          </div>
+        </div>
+
+        <!-- session vars -->
+        <div style="padding:10px 12px">
+          <div class="section-label" style="margin-bottom:8px"><span>Pipeline config</span></div>
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <tr><td style="padding:3px 0;color:var(--text-muted);font-family:var(--mono)">CAMERA_FPS_TARGET</td><td style="text-align:right;font-family:var(--mono);color:var(--text-primary)">10</td></tr>
+            <tr><td style="padding:3px 0;color:var(--text-muted);font-family:var(--mono)">PERSON_CONF_THRESHOLD</td><td style="text-align:right;font-family:var(--mono);color:var(--text-primary)">0.45</td></tr>
+            <tr><td style="padding:3px 0;color:var(--text-muted);font-family:var(--mono)">REID_SIMILARITY_THRESHOLD</td><td style="text-align:right;font-family:var(--mono);color:var(--text-primary)">0.85</td></tr>
+            <tr><td style="padding:3px 0;color:var(--text-muted);font-family:var(--mono)">GEMINI_MODEL</td><td style="text-align:right;font-family:var(--mono);color:var(--accent-cyan)">gemini-2.0-flash-exp</td></tr>
+            <tr><td style="padding:3px 0;color:var(--text-muted);font-family:var(--mono)">L3_STATUS</td><td style="text-align:right;font-family:var(--mono);color:var(--green)">ENABLED</td></tr>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /bottom-row -->
+
+</div><!-- /app -->
+
+<!-- PERSON DETAIL MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title">Person Profile</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── CLOCK ── */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB', {hour12:false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ── THEME TOGGLE ── */
+document.getElementById('themeToggle').addEventListener('click', function() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  this.style.color = isDark ? '#0891b2' : '';
+});
+
+/* ── UPTIME COUNTER ── */
+let uptimeSeconds = 8073;
+setInterval(() => {
+  uptimeSeconds++;
+  const h = String(Math.floor(uptimeSeconds/3600)).padStart(2,'0');
+  const m = String(Math.floor((uptimeSeconds%3600)/60)).padStart(2,'0');
+  const s = String(uptimeSeconds%60).padStart(2,'0');
+  document.getElementById('uptime').textContent = h+':'+m+':'+s;
+}, 1000);
+
+/* ── SESSION ID ── */
+document.getElementById('session-id').textContent = 'session:' + Math.random().toString(36).slice(2,10).toUpperCase();
+
+/* ── SPARKLINES ── */
+function buildSparkline(id, data, color) {
+  const container = document.getElementById(id);
+  const max = Math.max(...data);
+  data.forEach(v => {
+    const bar = document.createElement('div');
+    bar.className = 'spark-bar';
+    bar.style.height = Math.max(4, Math.round((v/max)*100))+'%';
+    bar.style.background = color;
+    bar.style.opacity = .5 + (v/max)*.5;
+    container.appendChild(bar);
+  });
+}
+buildSparkline('spark-high', [0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,2,1,0,0,3], '#ef4444');
+buildSparkline('spark-med',  [1,2,3,1,2,4,2,3,2,1,3,4,2,1,2,3,4,5,3,6,4,3,5,21], '#f59e0b');
+buildSparkline('spark-low',  [8,12,15,10,18,20,14,16,22,18,24,19,21,17,23,26,22,28,24,30,28,26,32,260], '#2dd4bf');
+
+/* ── CONFIDENCE DISTRIBUTION ── */
+const confDist = [3, 7, 14, 22, 31, 41, 38, 29, 19, 12, 7, 4, 2];
+const maxConf = Math.max(...confDist);
+const confEl = document.getElementById('conf-dist');
+confDist.forEach((v, i) => {
+  const bar = document.createElement('div');
+  bar.style.cssText = `flex:1;border-radius:2px 2px 0 0;background:var(--accent-cyan);opacity:${.3+.7*(v/maxConf)};height:${Math.max(2,Math.round((v/maxConf)*36))}px`;
+  confEl.appendChild(bar);
+});
+
+/* ── LATENCY CHART (canvas) ── */
+const latencyData = [];
+for(let i=0;i<30;i++) latencyData.push(55 + Math.random()*40);
+function drawLatency() {
+  const canvas = document.getElementById('latency-chart');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 80;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const min=40, max=120;
+  ctx.clearRect(0,0,w,h);
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  ctx.strokeStyle = isDark ? 'rgba(34,211,238,.7)' : 'rgba(8,145,178,.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  latencyData.forEach((v, i) => {
+    const x = (i/(latencyData.length-1))*w;
+    const y = h - ((v-min)/(max-min))*(h-8)-4;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // fill
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+  ctx.fillStyle = isDark ? 'rgba(34,211,238,.07)' : 'rgba(8,145,178,.07)';
+  ctx.fill();
+}
+setTimeout(drawLatency, 100);
+setInterval(() => {
+  latencyData.shift();
+  latencyData.push(55 + Math.random()*40);
+  drawLatency();
+}, 2000);
+
+/* ── PERSON PROFILES ── */
+const profiles = {
+  'a3f2': {
+    id: 'a3f2-b1c9', suspicion: 89, risk: 'HIGH',
+    appearances: 4, dwell: '7m 43s', camera: 'tapo-north-wide',
+    objects: ['scissors'], posture: 'upright',
+    first_seen: '14:15:31', last_seen: '14:31:54',
+    reid_sim: '0.91 (matched)',
+    timeline: [
+      {time:'14:15:31', text:'First appearance · north gate · low risk'},
+      {time:'14:20:14', text:'Second return · confidence 0.88'},
+      {time:'14:28:03', text:'Third return — pattern flagged'},
+      {time:'14:31:54', text:'Fourth return · scissors detected · HIGH RISK'},
+    ]
+  },
+  'c1b9': {
+    id: 'c1b9-d4e2', suspicion: 52, risk: 'MEDIUM',
+    appearances: 2, dwell: '4m 12s', camera: 'tapo-north-tele',
+    objects: ['backpack'], posture: 'upright',
+    first_seen: '14:22:17', last_seen: '14:31:22',
+    reid_sim: '0.87 (matched)',
+    timeline: [
+      {time:'14:22:17', text:'First appearance · north entrance · medium risk (loitering)'},
+      {time:'14:31:22', text:'Still present · dwell threshold exceeded'},
+    ]
+  }
+};
+
+function openModal(uuid) {
+  const p = profiles[uuid];
+  if(!p) return;
+  document.getElementById('modal-title').textContent = 'Person · UUID ' + p.id;
+  const riskColor = p.risk==='HIGH' ? 'var(--red)' : p.risk==='MEDIUM' ? 'var(--amber)' : 'var(--teal)';
+  const tl = p.timeline.map(t =>
+    `<div class="tl-item"><span class="tl-time">${t.time}</span><div class="tl-dot" style="background:${riskColor}"></div><span class="tl-text">${t.text}</span></div>`
+  ).join('');
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-row"><span class="modal-key">UUID</span><span class="modal-val" style="font-family:var(--mono)">${p.id}</span></div>
+    <div class="modal-row"><span class="modal-key">Risk Tier</span><span class="modal-val" style="color:${riskColor};font-family:var(--mono)">${p.risk}</span></div>
+    <div class="modal-row"><span class="modal-key">Suspicion Score</span><span class="modal-val" style="color:${riskColor}">${p.suspicion}%</span></div>
+    <div class="modal-row"><span class="modal-key">Appearances</span><span class="modal-val">${p.appearances}</span></div>
+    <div class="modal-row"><span class="modal-key">Total Dwell</span><span class="modal-val">${p.dwell}</span></div>
+    <div class="modal-row"><span class="modal-key">Camera</span><span class="modal-val" style="font-family:var(--mono)">${p.camera}</span></div>
+    <div class="modal-row"><span class="modal-key">Objects Held</span><span class="modal-val">${p.objects.join(', ')}</span></div>
+    <div class="modal-row"><span class="modal-key">Posture</span><span class="modal-val">${p.posture}</span></div>
+    <div class="modal-row"><span class="modal-key">Re-ID Similarity</span><span class="modal-val" style="font-family:var(--mono)">${p.reid_sim}</span></div>
+    <div class="modal-row"><span class="modal-key">First Seen</span><span class="modal-val" style="font-family:var(--mono)">${p.first_seen}</span></div>
+    <div class="modal-row"><span class="modal-key">Last Seen</span><span class="modal-val" style="font-family:var(--mono)">${p.last_seen}</span></div>
+    <div class="timeline"><div class="section-label" style="margin:12px 0 6px">Session Timeline</div>${tl}</div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+/* ── FILTER FEED ── */
+function filterFeed(tier, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.ev').forEach(ev => {
+    if(tier==='all') { ev.style.display=''; return; }
+    const hasTier = ev.classList.contains(tier==='high'?'high':tier==='med'?'med':'low');
+    ev.style.display = hasTier ? '' : 'none';
+  });
+}
+
+/* ── SEARCH FEED ── */
+function searchFeed(q) {
+  const term = q.toLowerCase();
+  document.querySelectorAll('.ev').forEach(ev => {
+    ev.style.display = ev.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+}
+
+/* ── CAM CLICK ── */
+function camClick(name) {
+  console.log('Camera selected:', name);
+}
+
+/* ── LIVE EVENT COUNTER (demo animation) ── */
+let evBase = 284;
+setInterval(() => {
+  if(Math.random() < .3) {
+    evBase++;
+    document.getElementById('ev-count').textContent = evBase;
+  }
+}, 4000);
+</script>
+</body>
+</html>
